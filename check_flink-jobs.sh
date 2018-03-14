@@ -19,17 +19,30 @@ UNKNOWN=3
 # specify the limit for the running jobs
 JOBS_RUNNING=${JOBS_RUNNING:=16}
 
+# create the directory for flink jobs
+DATA_DIR='/usr/lib/nagios/plugins/flink_jobs'
+
+# checking the user privileges
+if [ $(id -u) -eq 0 ]; then
+    if ! [ -d $DATA_DIR ]; then
+        mkdir -p $DATA_DIR
+    fi
+else
+    echo "UNKNOWN - $0 is not executable by non root user."
+    exit $STATE_UNKNOWN
+fi
+
 # Checking 'jq' package exists on the system 
 #
 if [ ! -x $JQ ]; then
-        echo "UNKNOWN: jq not found or is not executable by the nagios user."
+        echo "UNKNOWN -  jq not found or is not executable by the nagios user."
         exit $STATE_UNKNOWN
 fi
 
 # Checking 'nc' package exists on the system
 #
 if [ ! -x $NC ]; then
-        echo "UNKNOWN: nc not found or is not executable by the nagios user."
+        echo "UNKNOWN - nc not found or is not executable by the nagios user."
         exit $STATE_UNKNOWN
 fi
 
@@ -82,13 +95,15 @@ flink_get_data()
       if [ $JOBS_RUNNING -le $jobs_count ]; then
           echo "JOBS OK - $jobs_count jobs are $STATE  "
           exit $OK
-      elif [ $JOBS_RUNNING -lt $jobs_count ]; then
-          echo "CRITICAL: $jobs_count jobs are $STATE  "
+      elif [ $JOBS_RUNNING -gt $jobs_count ]; then
+          echo "CRITICAL - $jobs_count jobs are $STATE  "
           exit $CRITICAL
       fi
+   elif [ $STATE == "completed" ];then
+          echo "JOBS OK - $jobs_count jobs are $STATE "
+          exit $OK
    else
-	  echo "JOBS OK - $jobs_count jobs are $STATE "
-	  exit $OK
+           exit $UNKNOWN
    fi
 }
 
@@ -109,12 +124,12 @@ flink_job()
 	       flink_get_data
 	       ;;
            *)
-               echo "UNKNOWN: Please give state value for -s either running or completed."
+               echo "UNKNOWN - Please give state value for -s either running or completed."
 	       exit $UNKNOWN
                ;; 
       esac
    else
-      echo "UNKNOWN: Connection not established. Please check the ip-address and port values"
+      echo "UNKNOWN - Connection not established. Please check the ip-address and port values"
       exit $UNKNOWN
    fi
 }
