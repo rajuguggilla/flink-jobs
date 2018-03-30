@@ -17,19 +17,12 @@ CRITICAL=2
 UNKNOWN=3
 
 # specify the limit for the running jobs
-JOBS_RUNNING=${JOBS_RUNNING:=16}
+JOBS_RUNNING=${JOBS_RUNNING:=17}
 
-# create the directory for flink jobs
-DATA_DIR='/usr/lib/nagios/plugins/flink_jobs'
-
-# checking the user privileges
-if [ $(id -u) -eq 0 ]; then
-    if ! [ -d $DATA_DIR ]; then
-        mkdir -p $DATA_DIR
-    fi
-else
-    echo "UNKNOWN - $0 is not executable by non root user."
-    exit $STATE_UNKNOWN
+# flink data dir to hold the json files
+FLINK_DATA_DIR=/tmp/flink-data
+if ! [ -d $FLINK_DATA_DIR ]; then
+   mkdir $FLINK_DATA_DIR
 fi
 
 # Checking 'jq' package exists on the system 
@@ -112,7 +105,7 @@ flink_get_data()
 flink_job()
 {
    flink_url="http://$HOSTNAME:$PORT"
-   data_json="$STATE-jobs.json"
+   data_json="$FLINK_DATA_DIR/$STATE-jobs.json"
 
    nc -z $HOSTNAME $PORT
    if [ $? -eq 0 ]; then 
